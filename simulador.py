@@ -1,3 +1,4 @@
+from datetime import date
 import sys
 from dataclasses import dataclass
 from typing import List
@@ -54,17 +55,21 @@ print(node_index)
 print(router_index)
 print(table_index)
 
-for i in lines:
-    i = i.strip('\n')
+nodes = []
+routers = []
+table = RouteTable([])
 
-    if "#NODE" in i:
-        current_class = 'node'
-        print("AQUI")
+# create nodes
+for i in range(node_index+1, router_index):
+    data = lines[i].split(",")
+    nodes.append(Node(data[0], data[1], data[2], data[3]))
 
-    if "#ROUTER" in i:
-        current_class = 'router'
+# create routers
+for i in range(router_index+1, table_index):
+    data = lines[i].split(",")
+    routers.append(Router(data[0], data[1], data[2], data[3]))
 
-    if "#ROUTERTABLE" in i:
-        current_class = 'table'
-
-    print(i)
+for i in range(table_index+1, len(lines)):
+    data = lines[i].split(",")
+    endereco = RouteTable.RouteTableElement(data[0], data[1], data[2], data[3])
+    table.table.append(endereco)
