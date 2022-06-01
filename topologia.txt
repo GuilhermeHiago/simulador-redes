@@ -1,0 +1,6 @@
+#NODE
+<node_name>,<MAC>,<IP/prefix>,<gateway>
+#ROUTER
+<router_name>,<num_ports>,<MAC0>,<IP0/prefix>,<MAC1>,<IP1/prefix>,<MAC2>,<IP2/prefix> …
+#ROUTERTABLE
+<router_name>,<net_dest/prefix>,<nexthop>,<port>
