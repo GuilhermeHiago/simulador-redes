@@ -1,21 +1,24 @@
-from datetime import date
 import sys
 from dataclasses import dataclass
 from typing import List
+
+from httplib2 import ProxiesUnavailableError
 
 @dataclass
 class Node:
     name : str
     mac : str
-    ipPrefix : str
+    ip_prefix : str
     gateway : str
 
 @dataclass
 class Router:
     router_name : str
     num_ports : str
-    MAC0 : str
+    mac_list : List[str]
     ip_list : List[str]
+
+    nodes_ref = {}
 
 @dataclass
 class RouteTable:
@@ -28,6 +31,15 @@ class RouteTable:
         port : str
 
     table : List[RouteTableElement]
+
+def find_occurrence(list, element, occurrence) -> int:
+    index = -1
+
+    if element in list[index:]:
+        for i in range(occurrence):
+            index = list[index+1:0].find(element)
+
+    return index
 
 args = sys.argv[1:]
 
@@ -67,9 +79,42 @@ for i in range(node_index+1, router_index):
 # create routers
 for i in range(router_index+1, table_index):
     data = lines[i].split(",")
-    routers.append(Router(data[0], data[1], data[2], data[3]))
+    print(data)
+
+    ip_list = []
+    mac_list = []
+
+    for i in range(int(data[1])):
+        mac_list.append(data[2])
+        ip_list.append(data[3])
+
+        del data[2:4]
+    
+    routers.append(Router(data[0], data[1], mac_list, ip_list))
 
 for i in range(table_index+1, len(lines)):
     data = lines[i].split(",")
     endereco = RouteTable.RouteTableElement(data[0], data[1], data[2], data[3])
     table.table.append(endereco)
+
+# itererate the routers list
+for router in routers:
+
+    # iterate the port ips of router
+    for ip in router.ip_list:
+        router.nodes_ref[ip] = []
+
+        # iterate de list of nodes
+        for node in nodes:
+            print(node.ip_prefix[0:find_occurrence(node.ip_prefix, ".", 2)])
+            print(ip[0:find_occurrence(ip, '.', 2)])
+            # find nodes conected to the router port
+            if node.ip_prefix[0:find_occurrence(node.ip_prefix, ".", 2)] == ip[0:find_occurrence(ip, '.', 2)]:
+                router.nodes_ref[ip] = router.nodes_ref[ip].append(node)
+
+                print(node.ip_prefix)
+                print(ip)
+                print("----")
+
+# simulador <topologia> <comando> <origem> <destino>
+# python3 simulador.py topologia.txt ping n1 n2
