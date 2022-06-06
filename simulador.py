@@ -115,7 +115,10 @@ class Router:
 
 
         # da problema o port nao possui
-        port.send_arp(destino)
+        # port.send_arp(destino)
+        # print(self.nodes_ref)
+        for i in self.nodes_ref[port.ip_prefix]:
+            i.receive_arp(port, destino)
 
         pass
 
@@ -253,7 +256,8 @@ for r in routers:
 
 # arp_request_intra(nodes[0], nodes[1])
 
-# nodes[0].send_arp(nodes[1])
+nodes[0].send_arp(nodes[1])
+print("\n")
 routers[0].send_arp(nodes[2])
 
 # print("porta: ", nodes[0].router_port)
