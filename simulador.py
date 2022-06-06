@@ -2,8 +2,6 @@ import sys
 from dataclasses import dataclass
 from typing import List
 
-from httplib2 import ProxiesUnavailableError
-
 @dataclass
 class Node:
     name : str
@@ -32,14 +30,21 @@ class RouteTable:
 
     table : List[RouteTableElement]
 
+# find the occurrence of a element in list
 def find_occurrence(list, element, occurrence) -> int:
-    index = -1
+    index = 0
 
-    if element in list[index:]:
-        for i in range(occurrence):
-            index = list[index+1:0].find(element)
+    for i in range(occurrence):
+        pos = list.find(element)
 
-    return index
+        if pos == -1:
+            return -1
+
+        index += pos+1
+        list = list[pos+1:]
+            
+
+    return index-1
 
 args = sys.argv[1:]
 
@@ -97,6 +102,11 @@ for i in range(table_index+1, len(lines)):
     endereco = RouteTable.RouteTableElement(data[0], data[1], data[2], data[3])
     table.table.append(endereco)
 
+a = '19.2.2.0'
+a2 = '19.2.2.1'
+
+# print(find_occurrence(a, '.', 3))
+
 # itererate the routers list
 for router in routers:
 
@@ -104,17 +114,14 @@ for router in routers:
     for ip in router.ip_list:
         router.nodes_ref[ip] = []
 
+        aux = []
         # iterate de list of nodes
         for node in nodes:
-            print(node.ip_prefix[0:find_occurrence(node.ip_prefix, ".", 2)])
-            print(ip[0:find_occurrence(ip, '.', 2)])
             # find nodes conected to the router port
-            if node.ip_prefix[0:find_occurrence(node.ip_prefix, ".", 2)] == ip[0:find_occurrence(ip, '.', 2)]:
-                router.nodes_ref[ip] = router.nodes_ref[ip].append(node)
+            if node.ip_prefix[0:find_occurrence(node.ip_prefix, ".", 3)] == ip[0:find_occurrence(ip, '.', 3)]:
+                aux.append(node)
+                router.nodes_ref[ip] = aux#router.nodes_ref[ip].append(node)
 
-                print(node.ip_prefix)
-                print(ip)
-                print("----")
-
+print(routers[0].nodes_ref)
 # simulador <topologia> <comando> <origem> <destino>
 # python3 simulador.py topologia.txt ping n1 n2
