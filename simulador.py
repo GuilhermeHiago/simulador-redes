@@ -40,7 +40,18 @@ def get_subnet(ip_mask):
 
     return mask_value
 
+def find_node(who_search, node, subnet):
+    # print("finder")
+    # print(subnet)
+    node = [x for x in subnet.keys() if get_subnet(x) == get_subnet(who_search.ip_prefix)]
+    # print(subnet)
+    node = subnet[node[0]]
+    # print("no:", node)
+    for n in node:
+        if n.ip_prefix == who_search.ip_prefix:
+            return n
 
+    return None
 
 @dataclass
 class Node:
@@ -57,7 +68,6 @@ class Node:
         # caso o arp seja dentro da subrede
         if get_subnet(self.ip_prefix) == get_subnet(destino.ip_prefix):
             subnet = [x for x in self.router_ref.nodes_ref.keys() if get_subnet(x) == get_subnet(self.ip_prefix)]
-
             subnet = self.router_ref.nodes_ref[subnet[0]]
 
             if destino.ip_prefix not in self.arp_table.keys():
@@ -70,6 +80,12 @@ class Node:
                     if resp != None:
                         self.arp_table[destino.ip_prefix] = resp
                         return
+
+                # resp = list(map(lambda n : n.receive_arp(self, destino), subnet))
+
+                # if resp[0] != None:
+                #     self.arp_table[destino.ip_prefix] = resp
+                #     return
 
         self.send_arp_router()
         # # caso destino em subrede externa passa para roteador
@@ -88,6 +104,34 @@ class Node:
             return destino.mac
 
         return None
+
+
+    def send_icmp(self, origem, destino, ttl):
+        # caso o arp seja dentro da subrede
+        if get_subnet(self.ip_prefix) == get_subnet(destino.ip_prefix):
+            subnet = [x for x in self.router_ref.nodes_ref.keys() if get_subnet(x) == get_subnet(self.ip_prefix)]
+
+            subnet = self.router_ref.nodes_ref[subnet[0]]
+
+            if destino.ip_prefix not in self.arp_table.keys():
+                print(f"Note over {self.name} : ARP Request<br/>Who has {destino.ip_prefix[0:destino.ip_prefix.find('/')]}? Tell {self.ip_prefix[0:self.ip_prefix.find('/')]}")
+                # "enviando" arp request para todos da subrede
+                for n in subnet:
+                    # envia arp para todos da rede
+                    resp = n.receive_arp(self, destino)
+
+                    if resp != None:
+                        self.arp_table[destino.ip_prefix] = resp
+                        return
+
+        self.send_icmp_router()
+        # # caso destino em subrede externa passa para roteador
+        # else:
+
+        return None
+
+    def receive_icmp(self, origem, destino, ttl):
+        pass
 
 @dataclass
 class Router:
