@@ -9,7 +9,7 @@ class Node:
     gateway : str
  
     router_ref = None
-    arp_table = {}
+    arp_table : dict = field(default_factory=lambda: {})
     router_port = None
  
     def send_arp(self, destino):
@@ -21,19 +21,20 @@ class Node:
             if destino.ip_prefix not in self.arp_table.keys():
                 print(f"Note over {self.name} : ARP Request<br/>Who has {destino.ip_prefix[0:destino.ip_prefix.find('/')]}? Tell {self.ip_prefix[0:self.ip_prefix.find('/')]}")
                 # "enviando" arp request para todos da subrede
-                for n in subnet:
-                    # envia arp para todos da rede
-                    resp = n.receive_arp(self, destino)
+
+                # for n in subnet:
+                #     # envia arp para todos da rede
+                #     resp = n.receive_arp(self, destino)
  
-                    if resp != None:
-                        self.arp_table[destino.ip_prefix] = resp
-                        return
+                #     if resp != None:
+                #         self.arp_table[destino.ip_prefix] = resp
+                #         return
  
-                # resp = list(map(lambda n : n.receive_arp(self, destino), subnet))
+                resp = list(map(lambda n : n.receive_arp(self, destino), subnet))
  
-                # if resp[0] != None:
-                #     self.arp_table[destino.ip_prefix] = resp
-                #     return
+                if resp[0] != None:
+                    self.arp_table[destino.ip_prefix] = resp[0]
+                    return
  
         self.send_arp_router()
         # # caso destino em subrede externa passa para roteador
@@ -51,7 +52,10 @@ class Node:
             print(f"{destino.name} ->> {origem.name} : ARP Reply<br/>{destino.ip_prefix[0:destino.ip_prefix.find('/')]} is at {destino.mac}")
             
             self.arp_table[origem.ip_prefix] = origem.mac
-            return destino.mac
+
+            print(f"origem: {origem.name} destino: {destino.name}")
+            # self.mac == destino.mac
+            return self.mac
  
         return None
  

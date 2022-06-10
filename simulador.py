@@ -3,48 +3,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import List
 from Node import Node
+from Router import Router
 from util import *
- 
- 
-@dataclass
-class Router:
-    router_name : str
-    num_ports : str
-    mac_list : List[str]
-    ip_list : List[str]
- 
-    port_list : List[Node] = field(default_factory=lambda: [])
- 
-    router_table = {}
- 
-    arp_table = {}
- 
-    nodes_ref = {}
- 
-    def send_arp(self, destino):
-        port = None
- 
-        for p in self.port_list:
-            if get_subnet(p.ip_prefix) == get_subnet(destino.ip_prefix):
-                port = p
-                break
- 
-        if destino.ip_prefix not in port.arp_table.keys():
-            print(f"Note over {port.name} : ARP Request<br/>Who has {destino.ip_prefix[0:destino.ip_prefix.find('/')]}? Tell {port.ip_prefix[0:port.ip_prefix.find('/')]}")
- 
- 
-        # da problema o port nao possui
-        # port.send_arp(destino)
-        # print(self.nodes_ref)
-        for i in self.nodes_ref[port.ip_prefix]:
-            i.receive_arp(port, destino)
- 
-        pass
- 
-    def receive_arp(port, origem, destino):
-        if destino == port:
-            return mac_list[ ip_list.find(destino.ip_list) ]
-        pass
  
  
 # router_table = {'ip': {'mac':None, 'port':None}}
@@ -144,12 +104,21 @@ for i in range(router_index+1, table_index):
     
     routers.append(Router(data[0], data[1], mac_list, ip_list, ports))
  
- 
+# create router tables
+
+""""AQWUI"""
+
 for i in range(table_index+1, len(lines)):
     data = lines[i].split(",")
-    table[data[0]].append({data[1]: {'next_hop': data[2], 'port': data[3]}})
- 
- 
+
+    r = [x for x in routers if x.router_name == data[0]][0]
+    
+    values = data[2:]
+    while values != []:
+        r.router_table[values[0]] = values[1]
+        values = values[2:]
+
+    # table[data[0]].append({data[1]: {'next_hop': data[2], 'port': data[3]}})
  
 print("router")
 for r in routers: 
@@ -177,10 +146,8 @@ print(nodes[0].name, nodes[0].arp_table)
 print(nodes[0].router_ref.port_list[0].name, nodes[0].router_ref.port_list[0].arp_table)
 print("\n")
 routers[0].send_arp(nodes[2])
- 
-# print("porta: ", nodes[0].router_port)
-# print("\n")
-# nodes[0].send_arp_router()
+
+print(routers[0].router_table)
  
 # TIME EXICED MORRE AO CHEGAR A 0
  
