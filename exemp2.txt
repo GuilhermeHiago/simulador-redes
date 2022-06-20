@@ -17,3 +17,10 @@ n1 sabe q n3 esta fora -> pergunta endereço do roteador
 r1 manda o arp_reply
 n1 manda ICMP para r1 com detino n3
 r1 manda arp procurando r3 (destino)(procurou na arp e n achou)()
+
+
+envia icmp echo request 
+ttl = 0 -> retorna icmp time exceeded
+ttl != 0:
+	destino? retorna echo reply
+	nao destino? repassa com ttl-1 

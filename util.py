@@ -14,6 +14,25 @@ def find_occurrence(list, element, occurrence) -> int:
  
     return index-1
  
+def get_subnet_bits(ip_mask):
+    mask = int(ip_mask[ip_mask.find("/")+1:])
+
+    bites = ''
+ 
+    while "." in ip_mask:
+        bites += bin(int(ip_mask[0:ip_mask.find(".")]))[2:] + "."
+
+        ip_mask = ip_mask[ip_mask.find(".")+1:]
+ 
+    bites += bin(int(ip_mask[0:ip_mask.find("/")]))[2:]
+
+    bites = bites[0:mask+3]
+
+    if bites[-1] == '.': bites = bites[0:len(bites)-1]
+
+    return bites
+
+# este é ruim so compara os decimais
 def get_subnet(ip_mask):
     mask = int(ip_mask[ip_mask.find("/")+1:])
     # ip = ip_mask[0:ip_mask.find("/")]

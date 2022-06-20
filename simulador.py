@@ -7,52 +7,31 @@ from Router import Router
 from util import *
  
  
-# router_table = {'ip': {'mac':None, 'port':None}}
- 
- 
-def arp_request_intra(origem, destino):
-    # Note over n1 : ARP Request<br/>Who has 192.168.0.3? Tell 192.168.0.2
-    # n2 ->> n1 : ARP Reply<br/>192.168.0.3 is at 00:00:00:00:00:02
-    # n1 ->> n2 : ICMP Echo Request<br/>src=192.168.0.2 dst=192.168.0.3 ttl=8
-    # n2 ->> n1 : ICMP Echo Reply<br/>src=192.168.0.3 dst=192.168.0.2 ttl=8
-    
-    if destino.ip_prefix not in origem.arp_table.keys():
-        print(f"Note over {origem.name} : ARP Request<br/>Who has {destino.ip_prefix[0:destino.ip_prefix.find('/')]}? Tell {origem.ip_prefix[0:origem.ip_prefix.find('/')]}")
-        # "enviando" arp request para todos da subrede
-        for n in nodes:
-            # caso encontrou
-            if origem.ip_prefix != n.ip_prefix and get_subnet(origem.ip_prefix) == get_subnet(n.ip_prefix) and n.ip_prefix == destino.ip_prefix:
-                print(f"{destino.name} ->> {origem.name} : ARP Reply<br/>{destino.ip_prefix[0:destino.ip_prefix.find('/')]} is at {destino.mac}")
-                return destino.mac
- 
-    return None
- 
-def arp_request_extra(origem, destino):
-    if destino.ip_prefix not in origem.arp_table.keys():
-        print(f"Note over {origem.name} : ARP Request<br/>Who has {destino.ip_prefix[0:destino.ip_prefix.find('/')]}? Tell {origem.ip_prefix[0:origem.ip_prefix.find('/')]}")
-    
- 
-    pass
- 
-def arp(origem, destino):
-    if get_subnet(origem.ip_prefix) == get_subnet(destino):
-        return arp_request_intra(origem, destino)
-    else:
-        # arp_request_extra(origem, destino)
-        pass
- 
 # uma mensagem de solicitação de resposta do ICMP é enviada ao destinatário pela fonte;
 # o programa do ping define um identificador de sequência e recebe essas mensagens de solicitação de resposta;
 # o ping insere o horário de envio na seção de dados da mensagem e então envia uma mensagem de resposta de eco ICMP de volta à fonte. Se o host estiver ativo ele a recebe;
 # o horário da chegada da resposta é registrado por meio do ping, que já contabilizou o horário de envio para cálculo do tempo de ida e volta da mensagem;
 # ele incrementa o identificador de sequência e envia uma nova mensagem de solicitação de resposta, de forma continuada, até completar o número de envios solicitado pelo usuário;
 # o programa é encerrado.
-def ping(origem, destino):
+def ping(origem:Node, destino:Node):
     # se origem nao sabe ender destino
         # caso seja na mesma subrede -> arp p/ destino -> icmp p/ destino
         # caso outra subrede -> arp p/ router -> icmp p/ router repassar
+    origem.send_icmp_echo_request(origem, destino, 8)
     pass    
- 
+
+
+def traceroute(origem:Node, destino:Node):
+    ttl = 1
+
+    while(True):
+        resp = origem.send_icmp_echo_request(origem, destino, ttl)
+
+        if resp == True:
+            ttl += 1
+        else:
+            break
+
 args = sys.argv[1:]
  
 arq = open(args[0], 'r')    # config file name
@@ -73,10 +52,8 @@ node_index = lines.index("#NODE") if "#NODE" in lines else -1
 router_index = lines.index("#ROUTER") if "#ROUTER" in lines else -1
 table_index = lines.index("#ROUTERTABLE") if "#ROUTERTABLE" in lines else -1
  
- 
-nodes = []
-routers = []
-table = {}
+nodes : List[Node] = []
+routers : List[Router] = []
  
 # create nodes
 for i in range(node_index+1, router_index):
@@ -97,33 +74,37 @@ for i in range(router_index+1, table_index):
         del data[2:4]
  
     ports = []
-    table[data[0]] = []
+    # table[data[0]] = []
  
+    temp_router = Router(data[0], data[1], mac_list, ip_list)
+
     for i in range(len(ip_list)):
         ports.append( Node(data[0], mac_list[i], ip_list[i], ip_list[i]))
+        nodes.append(ports[i])
+        ports[i].router_ref = temp_router
+        ports[i].is_router_port = True
+        ports[i].router_port = ports[i]
+
+    temp_router.port_list = ports
     
-    routers.append(Router(data[0], data[1], mac_list, ip_list, ports))
+    routers.append(temp_router)
  
+# connect nodes to node
+for n in nodes:
+    n.net = nodes
+
+# table = {}
 # create router tables
-
-""""AQWUI"""
-
 for i in range(table_index+1, len(lines)):
     data = lines[i].split(",")
 
     r = [x for x in routers if x.router_name == data[0]][0]
     
-    values = data[2:]
-    while values != []:
-        r.router_table[values[0]] = values[1]
-        values = values[2:]
+    values = data[1:]
 
-    # table[data[0]].append({data[1]: {'next_hop': data[2], 'port': data[3]}})
- 
-print("router")
-for r in routers: 
-    for p in r.port_list: print(p)
- 
+    # netdest/prefix : [nexthop(ip), port]
+    r.router_table[values[0]] = [values[1], values[2]]
+
 a = '19.2.2.0'
 a2 = '19.2.2.1'
  
@@ -137,23 +118,25 @@ for r in routers:
                 r.nodes_ref[port] = r.nodes_ref[port] + [node]
                 node.router_ref = r
                 node.router_port = [x for x in r.port_list if get_subnet(x.ip_prefix) == get_subnet(node.ip_prefix)][0]
- 
- 
-# arp_request_intra(nodes[0], nodes[1])
- 
-nodes[0].send_arp(nodes[0].router_ref.port_list[0])
-print(nodes[0].name, nodes[0].arp_table)
-print(nodes[0].router_ref.port_list[0].name, nodes[0].router_ref.port_list[0].arp_table)
-print("\n")
-routers[0].send_arp(nodes[2])
 
-print(routers[0].router_table)
+for r in routers:
+    r.global_nodes = nodes
+# arp_request_intra(nodes[0], nodes[1])
+
+# nodes[0].send_arp(nodes[1])
+
+traceroute(nodes[0], nodes[1])
+# nodes[0].send_icmp_echo_request(nodes[0], nodes[1], 8)
+
+# nodes[0].send_icmp_echo_request(nodes[0], nodes[1], 8)
+# nodes[0].send_icmp_echo_request(nodes[0], nodes[2], 2)
+# routers[0].port_list[0].send_arp(nodes[2])
+
+
+# routers[0].send_arp(nodes[2])
  
 # TIME EXICED MORRE AO CHEGAR A 0
- 
-# print(routers[0].port_list)
+
 # simulador <topologia> <comando> <origem> <destino>
 # python3 simulador.py topologia.txt ping n1 n2
 # python simulador.py topologia.txt ping n1 n2
- 
-
