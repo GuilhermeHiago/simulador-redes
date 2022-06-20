@@ -160,61 +160,79 @@ class Node:
         else:
             return self.send_icmp_time_exceeded(self, origem, destino, ttl)
 
+
+    # simula recebimento de pacote icmp
     def receive_icmp_echo_request(self, who_send, origem, destino, ttl):
-        # se este nodo for destino
         ttl -= 1
 
+        # se este nodo for destino
         if destino.ip_prefix == self.ip_prefix and ttl >= 0:
             ip_origem = self.ip_prefix[0:self.ip_prefix.find('/')]
             ip_destino = origem.ip_prefix[0:origem.ip_prefix.find('/')]
 
-            """"talvez mudar caminho de volta nem sempre eh o mesmo de chegada"""
-
             print(f"{self.name} ->> {who_send.name} : ICMP Echo Reply<br/>src={ip_origem} dst={ip_destino} ttl=8")
             
+            """"talvez mudar caminho de volta nem sempre eh o mesmo de chegada"""
+            """"talvez trocar por :"""
+            # return self.send_icmp_echo_reply(self, self, origem, 8)
+
+            # retorna icmp echo reply
             return who_send.receive_icmp_echo_reply(self, self, origem, 8)
-        # time exceeded
+
+        # caso ttl 0 (envia time exceeded)
         elif ttl <= 0:
             return self.send_icmp_time_exceeded(self, self, origem, 8)#who_send, origem, destino, 8)
-        # caso não seja o destino
+
+        # caso não seja o destino (repassa o echo request)
         elif get_subnet(destino.ip_prefix) != get_subnet(self.ip_prefix):
             if self.is_router_port:
                 return self.router_ref.receive_icmp(self, self, origem, destino, ttl)
         pass
 
+
+    # simula envia do pacote icmp echo reply
     def send_icmp_echo_reply(self, origem, destino, ttl):
         address : Node = None
 
         to_router = get_subnet(destino.ip_prefix) != get_subnet(self.ip_prefix)
         know_router_mac = self.router_port.ip_prefix in self.arp_table
 
+        # caso esteja em outra subrede e sabe endereco do roteador
         if to_router and know_router_mac:
             address = self.arp_table[self.router_port.ip_prefix][1]
+
+        # caso destino não esteja na tabela arp
         elif destino.ip_prefix not in self.arp_table:
             address = (self.send_arp(destino))[1]
+
+        # caso esteja na arp
         else:
             address = self.arp_table[destino.ip_prefix][1]
 
-        # n1 ->> r1 : ICMP Echo Request<br/>src=192.168.0.2 dst=192.168.1.2 ttl=8
         ip_origem = origem.ip_prefix[0:origem.ip_prefix.find('/')]
         ip_destino = destino.ip_prefix[0:destino.ip_prefix.find('/')]
 
         print(f"{self.name} ->> {address.name} : ICMP Echo Reply<br/>src={ip_origem} dst={ip_destino} ttl={ttl}")
 
+        # entrega mensagem para o proximo
         return address.receive_icmp_echo_reply(self, origem, destino, ttl)
 
+
+    # simula recebimento de pacote echo reply
     def receive_icmp_echo_reply(self, who_send, origem, destino, ttl):
-        # se este nodo for destino
         ttl -= 1
 
+        # se este nodo for destino, acaba
         if destino.ip_prefix == self.ip_prefix and ttl >= 0:
             return
+        # caso ttl 0, evia time exceeded
         elif ttl <= 0:
             return self.send_icmp_time_exceeded(who_send, origem, destino, 8)
-        # caso não seja o destino
+        # caso destino em outra subrede
         elif get_subnet(destino.ip_prefix) != get_subnet(self.ip_prefix):
             if self.is_router_port:
                 self.router_ref.receive_icmp_reply(self, self, origem, destino, ttl)
+        # caso esteja na subrede
         else:
             print("na subnet")
         pass
