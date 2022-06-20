@@ -106,8 +106,6 @@ class Node:
         elif to_router and know_router_mac:
             address = self.arp_table[self.router_port.ip_prefix][1]
         elif destino.ip_prefix not in self.arp_table:
-            print("CERTEZA", know_router_mac)
-            # print(f"eu {self.name} {self.ip_prefix} mando arp p/ {destino.name} {destino.ip_prefix}")
             address = (self.send_arp(destino))[1]
         else:
             address = self.arp_table[destino.ip_prefix][1]
@@ -128,7 +126,8 @@ class Node:
         
         elif ttl <= 0:
             return False
-
+        elif get_subnet(destino.ip_prefix) != get_subnet(self.ip_prefix):
+            return self.router_ref.receive_icmp_time_exceeded(self, origem, destino, ttl)
         else:
             return self.send_icmp_time_exceeded(self, origem, destino, ttl)
 
