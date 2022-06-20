@@ -58,11 +58,19 @@ class Router:
         port_ip = ""
         interface = ""
 
+        was_in_table = False
+
         # searchs in router table
         for ip in self.router_table.keys():
             if get_subnet(destino.ip_prefix) == get_subnet(ip):
+                was_in_table = True
                 port_ip = self.router_table[ip][0]
                 interface = self.router_table[ip][1]
+
+        if not was_in_table and "0.0.0.0/0" in self.router_table.keys():
+            port_ip = self.router_table["0.0.0.0/0"][0]
+            interface = self.router_table["0.0.0.0/0"][1]
+            # print("procura: ", destino.ip_prefix, self.router_table.keys())
         
         port = None
 
@@ -71,6 +79,8 @@ class Router:
         else:
             # find de router port to send the message
             # port = list(filter(lambda p : p.ip_prefix[0:p.ip_prefix.find("/")] == port_ip, self.global_nodes))[0]
+            # print(self.router_name,"interface",interface)
+            # print(self.router_table)
             port = self.port_list[int(interface)]
 
             dest : Node
@@ -91,11 +101,18 @@ class Router:
         port_ip = ""
         interface = ""
 
+        was_in_table = False
+
         # searchs in router table
         for ip in self.router_table.keys():
             if get_subnet(destino.ip_prefix) == get_subnet(ip):
+                was_in_table = True
                 port_ip = self.router_table[ip][0]
                 interface = self.router_table[ip][1]
+
+        if not was_in_table and "0.0.0.0/0" in self.router_table.keys():
+            port_ip = self.router_table["0.0.0.0/0"][0]
+            interface = self.router_table["0.0.0.0/0"][1]
         
         port = None
 
@@ -133,11 +150,18 @@ class Router:
         port_ip = ""
         interface = ""
 
+        was_in_table = False
+
         # searchs in router table
         for ip in self.router_table.keys():
             if get_subnet(destino.ip_prefix) == get_subnet(ip):
+                was_in_table = True
                 port_ip = self.router_table[ip][0]
                 interface = self.router_table[ip][1]
+
+        if not was_in_table and "0.0.0.0/0" in self.router_table.keys():
+            port_ip = self.router_table["0.0.0.0/0"][0]
+            interface = self.router_table["0.0.0.0/0"][1]
         
         port = None
 
@@ -163,8 +187,11 @@ class Router:
         return port.send_icmp_time_exceeded(who_send, origem, destino, ttl)
 
     def get_nexthop(self, destino:Node):
+        was_in_table = False
+
         for k in self.router_table.keys():
             if get_subnet(k) == get_subnet(destino.ip_prefix):
+                was_in_table = True
                 if self.router_table[k][0] == "0.0.0.0":
                     # print("Table Return:", self.router_table[k])
                     # print(self.port_list[int(self.router_table[k][1])])
@@ -177,3 +204,12 @@ class Router:
 
                 aux = list(filter(lambda n : nexthop in n.ip_prefix, self.global_nodes))[0]
                 return aux#self.port_list[int(self.router_table[k][1])]
+
+        if not was_in_table and "0.0.0.0/0" in self.router_table.keys():
+            # print("DEFAULT", self.router_table["0.0.0.0/0"])
+            
+            nexthop = self.router_table["0.0.0.0/0"][0]
+                # print(nexthop)
+
+            aux = list(filter(lambda n : nexthop in n.ip_prefix, self.global_nodes))[0]
+            return aux

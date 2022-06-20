@@ -125,7 +125,14 @@ for r in routers:
 
 # nodes[0].send_arp(nodes[1])
 
-traceroute(nodes[0], nodes[1])
+node1 = list(filter(lambda n : n.name == args[2], nodes))[0]
+node2 = list(filter(lambda n : n.name == args[3], nodes))[0]
+
+if args[1] == "ping":
+    ping(node1, node2)
+elif args[1] == "traceroute":
+    traceroute(node1, node2)
+
 # nodes[0].send_icmp_echo_request(nodes[0], nodes[1], 8)
 
 # nodes[0].send_icmp_echo_request(nodes[0], nodes[1], 8)
