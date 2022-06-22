@@ -22,38 +22,38 @@ class Router:
     global_nodes : List[Node] = field(default_factory=lambda: [])
 
     # usado para encontrar proximo salto
-    def send_arp(self, destino):
-        port = None
+    # def send_arp(self, destino):
+    #     port = None
  
-        for p in self.port_list:
-            if get_subnet(p.ip_prefix) == get_subnet(destino.ip_prefix):
-                port = p
-                break
+    #     for p in self.port_list:
+    #         if get_subnet(p.ip_prefix) == get_subnet(destino.ip_prefix):
+    #             port = p
+    #             break
  
-        if destino.ip_prefix not in port.arp_table.keys():
-            print(f"Note over {port.name} : ARP Request<br/>Who has {destino.ip_prefix[0:destino.ip_prefix.find('/')]}? Tell {port.ip_prefix[0:port.ip_prefix.find('/')]}")
+    #     if destino.ip_prefix not in port.arp_table.keys():
+    #         print(f"Note over {port.name} : ARP Request<br/>Who has {destino.ip_prefix[0:destino.ip_prefix.find('/')]}? Tell {port.ip_prefix[0:port.ip_prefix.find('/')]}")
  
  
-        # da problema o port nao possui
-        # port.send_arp(destino)
-        for i in self.nodes_ref[port.ip_prefix]:
-            i.receive_arp(port, destino)
+    #     # da problema o port nao possui
+    #     # port.send_arp(destino)
+    #     for i in self.nodes_ref[port.ip_prefix]:
+    #         i.receive_arp(port, destino)
  
-        pass
+    #     pass
  
-    def receive_arp(self, port, origem:Node, destino:Node):
-        port_ip = ""
+    # def receive_arp(self, port, origem:Node, destino:Node):
+    #     port_ip = ""
 
-        # searchs in router table
-        for ip in self.router_table.keys():
-            if get_subnet(destino.ip_prefix) == get_subnet(ip):
-                port_ip = ip
+    #     # searchs in router table
+    #     for ip in self.router_table.keys():
+    #         if get_subnet(destino.ip_prefix) == get_subnet(ip):
+    #             port_ip = ip
 
 
-        port = list(filter(lambda p : get_subnet(p.ip_prefix) == get_subnet(port_ip), self.port_list))[0]
+    #     port = list(filter(lambda p : get_subnet(p.ip_prefix) == get_subnet(port_ip), self.port_list))[0]
         
-        port.send_arp(destino)
-        pass
+    #     port.send_arp(destino)
+    #     pass
 
     def receive_icmp(self, who_send:Node , port:Node, origem:Node, destino:Node, ttl):
         port_ip = ""
@@ -174,13 +174,22 @@ class Router:
             if dest.ip_prefix not in port.arp_table.keys():
                 port.send_arp(dest)
 
-            ip_origem = origem.ip_prefix[0:origem.ip_prefix.find('/')]
-            ip_destino = destino.ip_prefix[0:destino.ip_prefix.find('/')]
+            # caso criando pacote
+            if ttl == 8:
+                ip_origem = port.ip_prefix[0:port.ip_prefix.find('/')]
+                ip_destino = destino.ip_prefix[0:destino.ip_prefix.find('/')]
 
-            # print(f"{port.name} ->> {dest.name} : ICMP Echo Request<br/>src={ip_origem} dst={ip_destino} ttl={ttl}")
-            return dest.receive_icmp_time_exceeded(port, origem, destino, ttl)
-        # port.send_arp(destino)
-        return port.send_icmp_time_exceeded(who_send, origem, destino, ttl)
+                print(f"{port.name} ->> {dest.name} : ICMP Time Exceeded<br/>src={ip_origem} dst={ip_destino} ttl={ttl}")
+                return dest.receive_icmp_time_exceeded(port, port, destino, ttl)
+            # caso redirecionando pacote
+            else: #ttl != 8:
+                ip_origem = origem.ip_prefix[0:origem.ip_prefix.find('/')]
+                ip_destino = destino.ip_prefix[0:destino.ip_prefix.find('/')]
+
+                print(f"{port.name} ->> {dest.name} : ICMP Time Exceeded<br/>src={ip_origem} dst={ip_destino} ttl={ttl}")
+                return dest.receive_icmp_time_exceeded(port, origem, destino, ttl)
+        
+        return port.send_icmp_time_exceeded(origem, destino, ttl)
 
     def get_nexthop(self, destino:Node):
         was_in_table = False

@@ -41,9 +41,15 @@ class Node:
 
         #caso porta do roteador
         if self.is_router_port:
-            return [self.router_ref.get_nexthop(destino), destino]
+            hop = self.router_ref.get_nexthop(destino)
+
+            print(f"Note over {self.name} : ARP Request<br/>Who has {hop.ip_prefix[0:hop.ip_prefix.find('/')]}? Tell {self.ip_prefix[0:self.ip_prefix.find('/')]}")
+            hop.receive_arp(self, hop)
+
+            return [hop.mac, hop]
 
         print(f"Note over {self.name} : ARP Request<br/>Who has {self.router_port.ip_prefix[0:self.router_port.ip_prefix.find('/')]}? Tell {self.ip_prefix[0:self.ip_prefix.find('/')]}")
+
         return self.send_arp_router()
 
 
@@ -101,7 +107,7 @@ class Node:
 
 
     # envia icmp time exceeded. recebe por argumento quem enviou msg a ele, o destino e a origem da msg, alem do ttl 
-    def send_icmp_time_exceeded(self, who_send, origem, destino, ttl):
+    def send_icmp_time_exceeded(self, origem, destino, ttl):
         address : Node = None
 
         to_router = get_subnet(destino.ip_prefix) != get_subnet(self.ip_prefix)
@@ -110,6 +116,9 @@ class Node:
         # caso seja para outra rede e não sabe a porta
         if self.is_router_port and to_router and not know_router_mac:
             address = self.router_ref.get_nexthop(destino)
+
+            if address.ip_prefix not in self.arp_table.keys():
+                self.send_arp(address)
 
         # caso seja em outra rede e tenha na arp
         elif to_router and know_router_mac:
@@ -124,7 +133,7 @@ class Node:
             address = self.arp_table[destino.ip_prefix][1]
 
         # caso seja envio entre portas de roteador
-        if self.is_router_port and address.is_router_port:
+        if self.is_router_port and address.is_router_port and self != origem:
             ip_origem = destino.ip_prefix[0:destino.ip_prefix.find('/')]
             ip_destino = origem.ip_prefix[0:origem.ip_prefix.find('/')]
 
@@ -179,9 +188,13 @@ class Node:
             # retorna icmp echo reply
             return who_send.receive_icmp_echo_reply(self, self, origem, 8)
 
+        # caso ttl 0 e destino em rede diferente
+        elif ttl <= 0 and get_subnet(destino.ip_prefix) != get_subnet(self.ip_prefix):
+            return self.router_ref.receive_icmp_time_exceeded(who_send, self, origem, 8)
+
         # caso ttl 0 (envia time exceeded)
         elif ttl <= 0:
-            return self.send_icmp_time_exceeded(self, self, origem, 8)#who_send, origem, destino, 8)
+            return self.send_icmp_time_exceeded(self, origem, 8)#who_send, origem, destino, 8)
 
         # caso não seja o destino (repassa o echo request)
         elif get_subnet(destino.ip_prefix) != get_subnet(self.ip_prefix):
@@ -225,9 +238,12 @@ class Node:
         # se este nodo for destino, acaba
         if destino.ip_prefix == self.ip_prefix and ttl >= 0:
             return
+        # caso ttl 0 e destino em rede diferente
+        elif ttl <= 0 and get_subnet(destino.ip_prefix) != get_subnet(self.ip_prefix):
+            return self.router_ref.receive_icmp_time_exceeded(who_send, self, origem, 8)
         # caso ttl 0, evia time exceeded
         elif ttl <= 0:
-            return self.send_icmp_time_exceeded(who_send, origem, destino, 8)
+            return self.send_icmp_time_exceeded(origem, destino, 8)
         # caso destino em outra subrede
         elif get_subnet(destino.ip_prefix) != get_subnet(self.ip_prefix):
             if self.is_router_port:
